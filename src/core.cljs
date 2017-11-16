@@ -1,5 +1,6 @@
 (ns extension.core
   (:require [reagent.core :as reagent :refer [atom]]
+            [extension.events :as events]
             [extension.css :refer [my-css]]
             [extension.settings-pane :refer [add-to-pane]]
             [extension.bulk-mute :as bulk-mute]
@@ -51,18 +52,35 @@
 (defn do-init! []
   (enable-console-print!)
   (-> js/chrome (aget "extension") (aget "onMessage")
-      (.addListener (fn [msg]
+      (.addListener
+       #_(events/dispatch [:network-intercept %])
+       (fn [msg]
                       (if-let [body ((js->clj msg) "body")]
-                        (reset! params-atom
-                                {:req (inc-req (first (body "__req")))
-                                 :rev (first (body "__rev"))
-                                 :pc (first (body "__pc"))
-                                 :af (first (body "__af"))
-                                 :a (first (body "__a"))
-                                 :dyn (first (body "__dyn"))
-                                 :fb_dtsg (first (body "fb_dtsg"))
-                                 :jazoest (first (body "jazoest"))})
-                        (swap! params-atom update :req inc-req)))))
+                        (do
+                          (if (every? #(contains? body %)
+                                      ["__req" "__rev" "__pc" "__a" "__dyn" "fb_dtsg" "jazoest"])
+                            (do
+                              (reset! params-atom
+                                      {:req (inc-req (first (body "__req")))
+                                       :rev (first (body "__rev"))
+                                       :pc (first (body "__pc"))
+                                       :a (first (body "__a"))
+                                       :dyn (first (body "__dyn"))
+                                       :doc_id (:doc_id @params-atom)
+                                       :fb_dtsg (first (body "fb_dtsg"))
+                                       :jazoest (first (body "jazoest"))})
+                              (swap! params-atom update :req inc-req)))
+
+                          (if (= "MessengerGraphQLThreadlistFetcherRe"
+                                 (first (body "batch_name")))
+                            (->> (body "queries")
+                                 first
+                                 (.parse js/JSON)
+                                 js->clj
+                                 (#(get % "o0"))
+                                 (#(get % "doc_id"))
+                                 (#(swap! params-atom assoc :doc_id %))))))
+           )))
   (add-css)
   (create-reagent-root)
   (add-new-feature-panes)

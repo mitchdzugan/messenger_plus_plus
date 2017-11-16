@@ -19,13 +19,12 @@
               (.-host js/location)
               "/ajax/mercury/change_mute_thread.php?dpr=2")
          {:format :url
-          :params {"thread_fbid" (last (clojure.string/split id #":"))
+          :params {"thread_fbid" id
                    "mute_settings" (if do-mute? -1 0)
                    "payload_source" "mercury"
                    "__user" (cookie/get "c_user")
                    "__a" (:a @params-atom)
                    "__dyn" (:dyn @params-atom)
-                   "__af" (:af @params-atom)
                    "__b" -1
                    "__pc" (:pc @params-atom)
                    "__rev" (:rev @params-atom)
@@ -33,7 +32,8 @@
                    "jazoest" (:jazoest @params-atom)
                    "__req" (:req @params-atom)
                    }
-          :handler on-complete})))
+          :handler on-complete})
+   ))
 
 
 (defn get-li-container [element]
@@ -309,7 +309,6 @@
    {:component-did-mount (fn [] (set-defaults))
     :component-did-update set-defaults
     :reagent-render (fn []
-                      (println [:chat-name-filter @chat-name-filter])
                       [boxv {:box {:size "1" :style {:height "80vh"}} :size "1"}
                        [:div {:style {:display (if (:in-progress? @progress) "block" "none")
                                       :position "fixed"
@@ -455,5 +454,5 @@
                          "discard"]]])}))
 
 (defn open-modal []
-  (reset! chats (get-chats))
+  (reset! chats [])
   (reset! new-feature-modal modal-body))

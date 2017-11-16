@@ -19,7 +19,9 @@
                  [secretary "1.2.3"]
                  [venantius/accountant "0.2.0"
                   :exclusions [org.clojure/tools.reader]]
-                 [re-com "0.9.0"]]
+                 [re-com "0.9.0"]
+                 [datascript "0.16.2"]
+                 [datival "0.1.0-SNAPSHOT"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.5"]
@@ -65,7 +67,7 @@
               :output-to "target/cljsbuild/public/js/app.js"
               :output-dir "target/cljsbuild/public/js/out"
               :source-map true
-              :optimizations :none
+              :optimizations :simple
               :pretty-print  true}}
 
 

@@ -10,7 +10,9 @@
     "permissions": [
         "webRequest", "webRequestBlocking",
         "https://*.messenger.com/ajax/*",
-        "https://*.facebook.com/ajax/*"
+        "https://*.facebook.com/ajax/*",
+        "https://*.messenger.com/api/graphqlbatch/*",
+        "https://*.facebook.com/api/graphqlbatch/*"
     ],
     "background": {"scripts": ["background.js"]},
     "content_scripts": [

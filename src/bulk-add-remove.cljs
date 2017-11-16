@@ -48,7 +48,6 @@
                     "__user" (cookie/get "c_user")
                     "__a" (:a @params-atom)
                     "__dyn" (:dyn @params-atom)
-                    "__af" (:af @params-atom)
                     "__b" -1
                     "__pc" (:pc @params-atom)
                     "__rev" (:rev @params-atom)
@@ -68,7 +67,6 @@
          :params {"__user" (cookie/get "c_user")
                   "__a" (:a @params-atom)
                   "__dyn" (:dyn @params-atom)
-                  "__af" (:af @params-atom)
                   "__b" -1
                   "__pc" (:pc @params-atom)
                   "__rev" (:rev @params-atom)
@@ -90,7 +88,6 @@
 
 (defn apply-for-pairs
   [change-fn [[user-id group-id] & pair-set]]
-  (println [:applying :for user-id :on group-id])
   (if user-id
     (change-fn user-id group-id
                (fn []
@@ -112,9 +109,8 @@
 
 (defn apply-changes [add?]
   (let [change-fn (if add? add-to-chat remove-from-chat)
-        get-id #(-> % (clojure.string/split #":" 2) last)
-        pairs (for [person-selected (map get-id @people-selected)
-                    group-selected (map get-id @groups-selected)]
+        pairs (for [person-selected @people-selected
+                    group-selected @groups-selected]
                 [person-selected group-selected])]
     (if (> (count pairs) 0)
       (do
@@ -129,9 +125,10 @@
         chats-selected (if people? people-selected groups-selected)
         last-chat-selected (if people? last-person-selected last-group-selected)
         chat-name-filter (if people? person-name-filter group-name-filter)
+        filter-fn (if people? filter remove)
         id-starts-with (if people? "row_header_id_user:" "row_header_id_thread:")
         chats-list (->> @chats
-                        (filter #(clojure.string/starts-with? (:id %) id-starts-with))
+                        (filter-fn :person?)
                         (filter #(or (nil? @chat-name-filter)
                                      (= "" @chat-name-filter)
                                      (clojure.string/includes?
@@ -254,11 +251,11 @@
      "Apply"]]])
 
 (defn open-modal-add []
-  (reset! chats (get-chats))
+  (reset! chats [])
   (reset! people-selected #{})
   (reset! new-feature-modal (fn [] (modal-body true))))
 
 (defn open-modal-remove []
-  (reset! chats (get-chats))
+  (reset! chats [])
   (reset! people-selected #{})
   (reset! new-feature-modal (fn [] (modal-body false))))

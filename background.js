@@ -11,7 +11,8 @@ chrome.webRequest.onBeforeRequest.addListener(
     // filters
     {
         urls: [
-            "https://*.messenger.com/ajax/*", "https://*.facebook.com/ajax/*"
+            "https://*.messenger.com/ajax/*", "https://*.facebook.com/ajax/*",
+            "https://*.messenger.com/api/graphqlbatch/*", "https://*.facebook.com/api/graphqlbatch/*"
         ],
     },
     // extraInfoSpec
