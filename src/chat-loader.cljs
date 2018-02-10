@@ -84,7 +84,7 @@
                      "/api/graphqlbatch/")
                 {:format :url
                  :response-format :raw
-                 :params {"batch_name" "MessengerGraphQLThreadlistFetcherRe"
+                 :params {"batch_name" "MessengerGraphQLThreadlistFetcher"
                           "__user" (cookie/get "c_user")
                           "__a" (:a @params-atom)
                           "__dyn" (:dyn @params-atom)

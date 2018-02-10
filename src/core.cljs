@@ -71,7 +71,7 @@
                                        :jazoest (first (body "jazoest"))})
                               (swap! params-atom update :req inc-req)))
 
-                          (if (= "MessengerGraphQLThreadlistFetcherRe"
+                          (if (= "MessengerGraphQLThreadlistFetcher"
                                  (first (body "batch_name")))
                             (->> (body "queries")
                                  first
