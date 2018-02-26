@@ -5,3 +5,5 @@
 (def params-atom (reagent/atom {:req "0"}))
 
 (def new-feature-modal (reagent/atom false))
+
+(def awaiting-unread-init (reagent/atom false))

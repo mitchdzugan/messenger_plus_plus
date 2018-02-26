@@ -5,7 +5,8 @@
             [extension.settings-pane :refer [add-to-pane]]
             [extension.bulk-mute :as bulk-mute]
             [extension.bulk-add-remove :as bulk-add-remove]
-            [extension.global-atoms :refer [params-atom new-feature-modal]]
+            [extension.view-unread :as view-unread]
+            [extension.global-atoms :refer [params-atom new-feature-modal awaiting-unread-init]]
             [extension.utils :refer [make-click remove-my-css add-my-temp-css set-interval]]
             [ajax.core :refer [GET POST]]
             [re-com.core :refer [v-box h-box modal-panel single-dropdown label progress-bar]]
@@ -29,14 +30,16 @@
 ;; Initialize app
 
 (defn mount-root []
-  (reagent/render [modals] (.getElementById js/document "reagent-root")))
+  (reagent/render [modals] (.getElementById js/document "reagent-root"))
+  )
 
 
 (defn create-reagent-root []
   (if-not (.getElementById js/document "reagent-root")
     (let [root (.createElement js/document "div")]
       (.setAttribute root "id" "reagent-root")
-      (.appendChild (.-body js/document) root))))
+      (.appendChild (.-body js/document) root))
+    ))
 
 (defn add-css []
   (let [el (.createElement js/document "style")]
@@ -45,7 +48,8 @@
     (.appendChild (.-head js/document) el)))
 
 (defn add-new-feature-panes []
-  (add-to-pane [["bulk-mute-item" "Bulk Mute" bulk-mute/open-modal]
+  (add-to-pane [["view-unread" "View Unread" view-unread/init]
+                ["bulk-mute-item" "Bulk Mute" bulk-mute/open-modal]
                 ["bulk-add-item" "Bulk Add To Groups" bulk-add-remove/open-modal-add]
                 ["bulk-remove-item" "Bulk Remove From Groups" bulk-add-remove/open-modal-remove]]))
 
@@ -73,13 +77,17 @@
 
                           (if (= "MessengerGraphQLThreadlistFetcher"
                                  (first (body "batch_name")))
-                            (->> (body "queries")
-                                 first
-                                 (.parse js/JSON)
-                                 js->clj
-                                 (#(get % "o0"))
-                                 (#(get % "doc_id"))
-                                 (#(swap! params-atom assoc :doc_id %))))))
+                            (do
+                              (if @awaiting-unread-init
+                                (do (reset! awaiting-unread-init false)
+                                    (view-unread/unsafe-init)))
+                              (->> (body "queries")
+                                   first
+                                   (.parse js/JSON)
+                                   js->clj
+                                   (#(get % "o0"))
+                                   (#(get % "doc_id"))
+                                   (#(swap! params-atom assoc :doc_id %)))))))
            )))
   (add-css)
   (create-reagent-root)
