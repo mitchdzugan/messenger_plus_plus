@@ -51,7 +51,9 @@
   (add-to-pane [["view-unread" "View Unread" view-unread/init]
                 ["bulk-mute-item" "Bulk Mute" bulk-mute/open-modal]
                 ["bulk-add-item" "Bulk Add To Groups" bulk-add-remove/open-modal-add]
-                ["bulk-remove-item" "Bulk Remove From Groups" bulk-add-remove/open-modal-remove]]))
+                ["bulk-remove-item" "Bulk Remove From Groups" bulk-add-remove/open-modal-remove]
+                ["gg-messenger" "gg Messenger" bulk-add-remove/open-modal-gg]
+                ]))
 
 (defn do-init! []
   (enable-console-print!)

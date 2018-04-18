@@ -41,7 +41,6 @@
 (defn get-scroll-area []
   (-> js/document
       (.getElementsByClassName "_1enh") (aget 0)
-      .-children (aget 0)
       .-children (aget 1)
       .-lastChild
       .-children (aget 0)
@@ -64,9 +63,10 @@
 (def seen-all? (reagent/atom false))
 
 (defn load-chats
-  ([chats] (load-chats chats false))
-  ([chats oldest-override]
-   (let [sorted-chats (->> @chats (sort-by :time))
+  ([chats] (load-chats chats false nil nil #{}))
+  ([chats oldest-override chats-selected regex all-selected]
+   (let [all-selected (clojure.set/join @chats-selected all-selected)
+         sorted-chats (->> @chats (sort-by :time))
          oldest-seconds (->> sorted-chats first :time)
          oldest (if oldest-seconds (* 1000 oldest-seconds))
          chats-map (->> @chats (map #(-> [(:id %) %])) (into {}))]
@@ -199,6 +199,12 @@
                                                                   :href href
                                                                   :muted? (not (nil? (get % "mute_until")))})))
                                                 )]
+                               (doseq [thread threads]
+                                 (if (and (not (contains? all-selected (:id thread)))
+                                          (not (:person? thread))
+                                          regex
+                                          (re-matches regex (:name thread)))
+                                   (swap! chats-selected conj (:id thread))))
                                (if (< (count (filter :friend? threads)) 99)
                                  (do (reset! load-for-user false)
                                      (reset! seen-all? true)
@@ -212,13 +218,15 @@
                                                                            {:time (max (:time c) (:time %2))})})]
                                                res) chats-map)
                                     vals
-                                    (map #(merge % {:name (or (:nickname %) (:name %))}))
+                                    (map #(merge % {:selected (and true
+                                                                   (not (:deselected %)))
+                                                    :name (or (:nickname %) (:name %))}))
                                     (reset! chats))
-                               (js/setTimeout #(load-chats chats) 500)))}))
-         (js/setTimeout #(load-chats chats) 100))
-       (js/setTimeout #(load-chats chats) 1000)))))
+                               (js/setTimeout #(load-chats chats false chats-selected regex all-selected) 500)))}))
+         (js/setTimeout #(load-chats chats false chats-selected regex all-selected) 100))
+       (js/setTimeout #(load-chats chats false chats-selected regex all-selected) 1000)))))
 
-(defn chat-loader [chats]
+(defn chat-loader [chats chats-selected regex]
   (reagent/create-class
    {:component-did-mount (fn []
                            (reset! load-for-user true)
@@ -227,7 +235,7 @@
                              (do
                                (reset! last-scroll-height (get-scroll-height))
                                (set-max-scroll-height)))
-                           (load-chats chats))
+                           (load-chats chats false chats-selected regex #{}))
     :component-will-unmount (fn []
                               (reset! user-request-more false))
     :reagent-render (fn []

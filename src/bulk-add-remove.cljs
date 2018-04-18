@@ -80,6 +80,7 @@
 (def people-selected (reagent/atom #{}))
 (def last-person-selected (reagent/atom false))
 (def groups-selected (reagent/atom #{}))
+(def selected-at (reagent/atom {}))
 (def last-group-selected (reagent/atom false))
 (def person-name-filter (reagent/atom ""))
 (def group-name-filter (reagent/atom ""))
@@ -121,7 +122,7 @@
 (defn column [add? people?]
   (let [top-message (if people?
                       (str "People to " (if add? "add to" "remove from") " chats")
-                      (str "Groups to " (if add? "add them to" "remove them from")))
+                      (str "Groups to " (if add? "add them to" "remove from")))
         chats-selected (if people? people-selected groups-selected)
         last-chat-selected (if people? last-person-selected last-group-selected)
         chat-name-filter (if people? person-name-filter group-name-filter)
@@ -134,7 +135,7 @@
                                      (clojure.string/includes?
                                       (clojure.string/lower-case (:name %))
                                       (clojure.string/lower-case @chat-name-filter))
-                                     (contains? @chats-selected (:id %))))
+                                     #_(contains? @chats-selected (:id %))))
                         (sort-by :time)
                         reverse)
         on-click (fn [e chat-id]
@@ -150,13 +151,18 @@
                                                                             (not= % @last-chat-selected)))
                                                           reverse
                                                           (drop-while #(and (not= % chat-id)
-                                                                            (not= % @last-chat-selected))))))))
+                                                                            (not= % @last-chat-selected)))
+
+                                                          (map (fn [cid]
+                                                                 (swap! selected-at assoc cid (.now js/Date)) cid)))))))
                        (reset! last-chat-selected chat-id))
                      (if (contains? @chats-selected chat-id)
                        (swap! chats-selected disj chat-id)
                        (do
                          (reset! last-chat-selected chat-id)
-                         (swap! chats-selected conj chat-id)))))
+                         (swap! chats-selected conj chat-id)
+                         (swap! selected-at assoc chat-id (.now js/Date))
+                         ))))
         ]
     [boxv {:box {:size "1"} :size "1"}
      [:h3 {:style {:text-align "center"}} top-message]
@@ -184,18 +190,73 @@
                                                       (if (contains? @chats-selected (:id chat))
                                                         {:background-color "#0084ff"
                                                          :color "#fff"}))
-                                        :dangerouslySetInnerHTML {:__html (:name chat)}}]))]
+                                        }
+                                   [:div {:style {:margin-right "10px" :display "inline"}
+                                          :dangerouslySetInnerHTML {:__html (:name chat)}}]
+                                   [:div
+                                    {:style {:font-weight "bold" :display "inline"}}
+                                    (->> chat :time (* 1000) js/Date. .toLocaleDateString)]
+                                   ]))]
      [boxh {:style {:border-width "1px 0 1px 0"
                     :border-style "solid"
                     :border-color "#ddd"
                     :padding "5px"
-                    :margin "0 5px 5px 5px"}}
+                    :margin "15px 5px 5px 5px"}}
       [:div (str "Number selected: " (count @chats-selected))]
       [:button {:className "_3quh _30yy _2t_ _5ixy"
                 :style {:font-size "12px"
-                        :margin "-2px 0 0 8px"}
+                        :margin "-1px 0 0 8px"}
                 :on-click (fn [] (reset! chats-selected #{}))}
-       "deselect"]]]))
+       "deselect ALL"]]]))
+
+(defn column-selected []
+  (let [add? false
+        people? false
+        top-message (if people?
+                      (str "People to " (if add? "add to" "remove from") " chats")
+                      "Selected Groups"
+                      )
+        chats-selected (if people? people-selected groups-selected)
+        last-chat-selected (if people? last-person-selected last-group-selected)
+        chat-name-filter (if people? person-name-filter group-name-filter)
+        filter-fn (if people? filter remove)
+        id-starts-with (if people? "row_header_id_user:" "row_header_id_thread:")
+        chats-list (->> @chats
+                        (filter #(contains? @chats-selected (:id %)))
+                        (sort-by #(get @selected-at (-> % :id)))
+                        reverse)
+        on-click (fn [e chat-id]
+                   (if (contains? @chats-selected chat-id)
+                     (swap! chats-selected disj chat-id)
+                     (do
+                       (reset! last-chat-selected chat-id)
+                       (swap! chats-selected conj chat-id)
+                       (swap! selected-at assoc chat-id (.now js/Date))
+                       )))
+        ]
+    [boxv {:box {:size "1"} :size "1"}
+     [:h3 {:style {:text-align "center"}} "selected"]
+     [:ul {:style {:height "100%" :overflow-y "auto"}}
+      (doall (for [chat chats-list]
+               ^{:key (:id chat)} [:li {:style {:margin-top "8px"}}
+                                   [:button {:on-click (fn [e] (on-click e (:id chat)))} "Deselect"]
+                                   [:div
+                                    {:id (:id chat)
+                                     :style (merge {:display "inline"
+                                                    :padding "0.2em 0.4em"
+                                                    :margin "0 0 2px 20px"
+                                                    :line-height "1.3"
+                                                    :border-radius "0.2em"
+                                                    :overflow "hidden"
+                                                    :white-space "nowrap"
+                                                    :text-overflow "ellipsis"}
+                                                   {})}
+                                    [:div {:style {:margin-right "10px" :display "inline"}
+                                           :dangerouslySetInnerHTML {:__html (:name chat)}}]
+                                    [:div
+                                     {:style {:font-weight "bold" :display "inline"}}
+                                     (->> chat :time (* 1000) js/Date. .toLocaleDateString)]
+                                    ]]))]]))
 
 (defn modal-body [add?]
   [boxv {:box {:size "1" :style {:height "80vh"}} :size "1"}
@@ -250,6 +311,60 @@
               :on-click #(apply-changes add?)}
      "Apply"]]])
 
+(defn modal-body-gg []
+  [boxv {:box {:size "1" :style {:height "80vh"}} :size "1"}
+
+
+
+                       [:div {:style {:display (if (:in-progress? @progress) "block" "none")
+                                      :position "fixed"
+                                      :width "100%"
+                                      :height "100%"
+                                      :left "0"
+                                      :top "0"
+                                      :z-index 10
+                                      :background-color "rgba(255, 255, 255, 0.8)"}}]
+                       [:div {:style {:display (if (:in-progress? @progress) "block" "none")
+                                      :position "fixed"
+                                      :width "40%"
+                                      :left "30%"
+                                      :top "40%"
+                                      :text-align "center"
+                                      :z-index 20}}
+                        [:p (str "Finished " (:finished @progress) " of " (:total @progress) " changes...")]
+                        [progress-bar
+                         :model    percent-progress
+                         :width    "100%"
+                         :striped? true
+                         :style {:width "100%"}]
+
+                        [:button {:className "_3quh _30yy _2t_ _5ixy"
+                                  :style {:margin-top "7px"}
+                                  :on-click (fn []
+                                              (reset! chats [])
+                                              (reset! percent-progress 0)
+                                              (reset! progress {:in-progress? false
+                                                                :total 0
+                                                                :finished 0})
+                                              (reset! new-feature-modal false))} "Cancel"]
+                        ]
+
+
+
+   [boxh {:box {:size "0 1 auto"} :size "1 1 auto" :align-self :center :style {:margin-bottom "10px"}}
+    [:h2 {:style {:text-align "center"}} (str "gg Messenger!")]]
+   [chat-loader chats groups-selected #"(?i).*smash.*"]
+
+   [boxh {:box {:size "1"} :size "1"}
+    [column false false]
+    [boxv {:box {:size "0 0 2px"} :style {:width "1px" :height "90%" :background-color "#ddd"}} ""]
+    [column-selected]
+    ]
+   [boxh {:box {:size "initial"} :size "initial" :gap "15px" :style {:margin-top "7px"}}
+    [:button {:className "_3quh _30yy _2t_ _5ixy"
+              :on-click #(apply-changes false)}
+     "Apply"]]])
+
 (defn open-modal-add []
   (reset! chats [])
   (reset! people-selected #{})
@@ -259,3 +374,8 @@
   (reset! chats [])
   (reset! people-selected #{})
   (reset! new-feature-modal (fn [] (modal-body false))))
+
+(defn open-modal-gg []
+  (reset! chats [])
+  (reset! people-selected #{(cookie/get "c_user")})
+  (reset! new-feature-modal (fn [] (modal-body-gg))))

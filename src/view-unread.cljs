@@ -30,7 +30,7 @@
 (defn mark-unread [time]
   (fn []
     (js/setTimeout
-     #(load-chats chats (* 1000 (+ 1 time)))
+     #(load-chats chats (* 1000 (+ 1 time)) #{} nil #{})
      5000)
     #_(reset! chats (map
                    #(if (= id (:id %))
